@@ -42,7 +42,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class ElasticSearchClient {
     private static final Logger LOGGER = LoggerFactory.getLogger(ElasticSearchClient.class);
-    
+
     private JestClient jestClient;
     private Configuration conf;
 
@@ -57,6 +57,7 @@ public class ElasticSearchClient {
         String[] endpoints = endpoint.split(",");
         String user = Key.getUsername(conf);
         String passwd = Key.getPassword(conf);
+        LOGGER.info("获取到的 es 认证信息为 -> user:{}, passwd:{}", user, passwd);
         boolean multiThread = Key.isMultiThread(conf);
         int readTimeout = Key.getTimeout(conf);
         boolean compression = Key.isCompression(conf);
@@ -77,6 +78,7 @@ public class ElasticSearchClient {
                 .discoveryFilter(discoveryFilter);
         if (!(StringUtils.isBlank(user) || StringUtils.isBlank(passwd))) {
             // 匿名登录
+            LOGGER.info("获取到的 es 认证信息为 -> user:{}, passwd:{} 准备设置证书信息", user, passwd);
             httpClientConfig.defaultCredentials(user, passwd);
         }
         factory.setHttpClientConfig(httpClientConfig.build());
@@ -125,7 +127,7 @@ public class ElasticSearchClient {
             ClusterInfoResult result = execute(new ClusterInfo.Builder().build());
             LOGGER.info("ClusterInfoResult: {}", result.getJsonString());
             return result.isGreaterOrEqualThan7();
-        }catch(Exception e) {
+        } catch (Exception e) {
             LOGGER.warn(e.getMessage());
             return false;
         }
@@ -133,6 +135,7 @@ public class ElasticSearchClient {
 
     /**
      * 获取索引的settings
+     *
      * @param indexName 索引名
      * @return 设置
      */
@@ -152,8 +155,8 @@ public class ElasticSearchClient {
     }
 
     public boolean createIndexIfNotExists(String indexName, String typeName,
-                               Object mappings, String settings,
-                               boolean dynamic, boolean isGreaterOrEqualThan7) throws Exception {
+                                          Object mappings, String settings,
+                                          boolean dynamic, boolean isGreaterOrEqualThan7) throws Exception {
         JestResult rst;
         if (!indicesExists(indexName)) {
             LOGGER.info("create index {}", indexName);
@@ -185,10 +188,10 @@ public class ElasticSearchClient {
         //如果大于7.x，mapping的PUT请求URI中不能带type，并且mapping设置中不能带有嵌套结构
         if (isGreaterOrEqualThan7) {
             rst = execute(new PutMapping7.Builder(indexName, mappings).
-                setParameter("master_timeout", Key.getMasterTimeout(this.conf)).build());
+                    setParameter("master_timeout", Key.getMasterTimeout(this.conf)).build());
         } else {
             rst = execute(new PutMapping.Builder(indexName, typeName, mappings)
-                .setParameter("master_timeout", Key.getMasterTimeout(this.conf)).build());
+                    .setParameter("master_timeout", Key.getMasterTimeout(this.conf)).build());
         }
         if (!rst.isSucceeded()) {
             LOGGER.error("PutMapping got ResponseCode: {}, ErrorMessage: {}", rst.getResponseCode(), rst.getErrorMessage());
@@ -252,7 +255,7 @@ public class ElasticSearchClient {
         }
         return true;
     }
-    
+
     /**
      * 获取index的mapping
      */
@@ -270,7 +273,7 @@ public class ElasticSearchClient {
             throw DataXException.asDataXException(ElasticSearchWriterErrorCode.ES_MAPPINGS, e.getMessage(), e);
         }
     }
-    
+
     public String getMappingForIndexType(String indexName, String typeName) {
         String indexMapping = this.getIndexMapping(indexName);
         JSONObject indexMappingInJson = JSON.parseObject(indexMapping);
@@ -298,7 +301,6 @@ public class ElasticSearchClient {
 
     /**
      * 关闭JestClient客户端
-     *
      */
     public void closeJestClient() {
         if (jestClient != null) {
